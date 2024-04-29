@@ -2,7 +2,7 @@ bl_info = {
     "name": "Render Buddy",
     "description": "",
     "author": "whoisryosuke",
-    "version": (0, 0, 2),
+    "version": (0, 0, 3),
     "blender": (2, 80, 0),
     "location": "Properties > Output",
     "warning": "", # used for warning icon and text in addons panel
@@ -13,16 +13,10 @@ bl_info = {
 
 import bpy
 
-from bpy.props import (StringProperty,
-                       BoolProperty,
-                       IntProperty,
-                       FloatProperty,
-                       FloatVectorProperty,
-                       EnumProperty,
+from bpy.props import (IntProperty,
                        PointerProperty,
                        )
 from bpy.types import (Panel,
-                       Menu,
                        Operator,
                        PropertyGroup,
                        )
@@ -39,7 +33,7 @@ class PluginProperties(PropertyGroup):
         )
 
 # The UI Panel in Render View
-class ExportPresetsPanel(bpy.types.Panel):
+class ExportPresetsPanel(Panel):
     """Creates a Panel in the scene context of the properties editor"""
     bl_label = "Render Buddy"
     bl_idname = "SCENE_PT_layout"
@@ -67,89 +61,51 @@ class ExportPresetsPanel(bpy.types.Panel):
         # Create two columns, by using a split layout.
         split = layout.split()
 
+        def draw_operator(layout, label, resolution_x, resolution_y):
+            op = layout.operator("export_options.set_resolution", text=label)
+            op.resolution_x = resolution_x
+            op.resolution_y = resolution_y
+
         # First column
         col = split.column()
         col.label(text="1080p:")
-        col.operator("export_options.set_1080p_square")
-        col.operator("export_options.set_1080p_vertical")
-        col.operator("export_options.set_1080p_widescreen")
+        draw_operator(col, "1080p Square", 1080, 1080)
+        draw_operator(col, "1080p Vertical", 1080, 1920)
+        draw_operator(col, "1080p Widescreen", 1920, 1080)
 
         # Second column, aligned
         col = split.column()
         col.label(text="4k:")
-        col.operator("export_options.set_4k_square")
-        col.operator("export_options.set_4k_vertical")
-        col.operator("export_options.set_4k_widescreen")
+        draw_operator(col, "4k Square", 3840, 3840)
+        draw_operator(col, "4k Vertical", 2160, 3840)
+        draw_operator(col, "4k Widescreen", 3840, 2160)
 
-
-
-class EXPORT_OPTIONS_set_1080p_square(bpy.types.Operator):
-    bl_idname = "export_options.set_1080p_square"
-    bl_label = "1080p Square"
-    bl_description = "Sets Resolution to 1080p"
+class EXPORT_OPTIONS_set_resolution(Operator):
+    bl_idname = "export_options.set_resolution"
+    bl_label = "Set Resolution"
+    bl_description = "Sets Resolution to given dimensions"
     bl_options = {"UNDO"}
 
-    def execute(self, context: bpy.types.Context) -> set[str]:
-        bpy.context.scene.render.resolution_x = 1080;
-        bpy.context.scene.render.resolution_y = 1080;
-        return {"FINISHED"}
+    resolution_x: IntProperty(
+        name="Resolution X",
+        description="Number of horizontal pixels in the rendered image",
+        default=1920,
+        min=1,
+    )
 
-class EXPORT_OPTIONS_set_1080p_vertical(bpy.types.Operator):
-    bl_idname = "export_options.set_1080p_vertical"
-    bl_label = "1080p Vertical"
-    bl_description = "Sets Resolution to 1080p x 1920p"
-    bl_options = {"UNDO"}
-
-    def execute(self, context: bpy.types.Context) -> set[str]:
-        bpy.context.scene.render.resolution_x = 1080;
-        bpy.context.scene.render.resolution_y = 1920;
-        return {"FINISHED"}
-
-class EXPORT_OPTIONS_set_1080p_widescreen(bpy.types.Operator):
-    bl_idname = "export_options.set_1080p_widescreen"
-    bl_label = "1080p Widescreen"
-    bl_description = "Sets Resolution to 1920p x 1080p"
-    bl_options = {"UNDO"}
+    resolution_y: IntProperty(
+        name="Resolution Y",
+        description="Number of vertical pixels in the rendered image",
+        default=1080,
+        min=1,
+    )
 
     def execute(self, context: bpy.types.Context) -> set[str]:
-        bpy.context.scene.render.resolution_x = 1920;
-        bpy.context.scene.render.resolution_y = 1080;
+        context.scene.render.resolution_x = self.resolution_x
+        context.scene.render.resolution_y = self.resolution_y
         return {"FINISHED"}
 
-class EXPORT_OPTIONS_set_4k_square(bpy.types.Operator):
-    bl_idname = "export_options.set_4k_square"
-    bl_label = "4k Square"
-    bl_description = "Sets Resolution to 3840px x 3840px"
-    bl_options = {"UNDO"}
-
-    def execute(self, context: bpy.types.Context) -> set[str]:
-        bpy.context.scene.render.resolution_x = 3840;
-        bpy.context.scene.render.resolution_y = 3840;
-        return {"FINISHED"}
-
-class EXPORT_OPTIONS_set_4k_widescreen(bpy.types.Operator):
-    bl_idname = "export_options.set_4k_widescreen"
-    bl_label = "4k Widescreen"
-    bl_description = "Sets Resolution to 3840px x 2160px"
-    bl_options = {"UNDO"}
-
-    def execute(self, context: bpy.types.Context) -> set[str]:
-        bpy.context.scene.render.resolution_x = 3840;
-        bpy.context.scene.render.resolution_y = 2160;
-        return {"FINISHED"}
-
-class EXPORT_OPTIONS_set_4k_vertical(bpy.types.Operator):
-    bl_idname = "export_options.set_4k_vertical"
-    bl_label = "4k Vertical"
-    bl_description = "Sets Resolution to 2160px x 3840px"
-    bl_options = {"UNDO"}
-
-    def execute(self, context: bpy.types.Context) -> set[str]:
-        bpy.context.scene.render.resolution_x = 2160;
-        bpy.context.scene.render.resolution_y = 3840;
-        return {"FINISHED"}
-
-class EXPORT_OPTIONS_test_render(bpy.types.Operator):
+class EXPORT_OPTIONS_test_render(Operator):
     bl_idname = "export_options.test_render"
     bl_label = "Test Render"
     bl_description = "Renders at 50% then returns prev. settings"
@@ -158,18 +114,18 @@ class EXPORT_OPTIONS_test_render(bpy.types.Operator):
         # Preserve prev settings
         # Make sure to copy any properties of classes
         import copy
-        prev_reso_percent = copy.copy(bpy.context.scene.render.resolution_percentage)
-        prev_file_path = copy.copy(bpy.context.scene.render.filepath)
+        prev_reso_percent = copy.copy(context.scene.render.resolution_percentage)
+        prev_file_path = copy.copy(context.scene.render.filepath)
         
         # Set to 50%
-        bpy.context.scene.render.resolution_percentage = 50
+        context.scene.render.resolution_percentage = 50
 
         # Make a filename based on current `.blend` file
         import os
         output_dir = os.path.dirname(bpy.data.filepath)
         filename_dirty = os.path.basename(bpy.data.filepath)
         filename = filename_dirty.replace(".blend", "")
-        file_type = bpy.context.scene.render.image_settings.file_format
+        file_type = context.scene.render.image_settings.file_format
         output_file_pattern_string = filename + "-%s." + file_type
 
         # Get the current time to append to filename
@@ -178,12 +134,12 @@ class EXPORT_OPTIONS_test_render(bpy.types.Operator):
         time = now.strftime("%H-%M-%S")
 
         # Render and save to file
-        bpy.context.scene.render.filepath = os.path.join(output_dir, (output_file_pattern_string % time))
+        context.scene.render.filepath = os.path.join(output_dir, (output_file_pattern_string % time))
         bpy.ops.render.render(write_still = bpy.data.is_saved)
 
         # Return settings
-        bpy.context.scene.render.resolution_percentage = prev_reso_percent
-        bpy.context.scene.render.filepath = prev_file_path
+        context.scene.render.resolution_percentage = prev_reso_percent
+        context.scene.render.filepath = prev_file_path
         
         return {"FINISHED"}
 
@@ -191,12 +147,7 @@ classes = (
     PluginProperties,
     ExportPresetsPanel,
     EXPORT_OPTIONS_test_render,
-    EXPORT_OPTIONS_set_1080p_square,
-    EXPORT_OPTIONS_set_1080p_vertical,
-    EXPORT_OPTIONS_set_1080p_widescreen,
-    EXPORT_OPTIONS_set_4k_square,
-    EXPORT_OPTIONS_set_4k_widescreen,
-    EXPORT_OPTIONS_set_4k_vertical
+    EXPORT_OPTIONS_set_resolution,
 )
 
 def register():
